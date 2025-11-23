@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MMCARTBOX — ChartBox like ChartGPT</title>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- PapaParse for CSV parsing -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <img src="https://cdn-icons-png.flaticon.com/512/6821/6821625.png" alt="robot" />
+      <h1>MMCARTBOX</h1>
+    </div>
+    <p class="tag">ChartGPT-like interface — multi-dataset, multi-series, and optional LLM suggestions (via server).</p>
+  </header>
+
+  <main>
+    <section class="left">
+      <div id="chat" class="chat"></div>
+
+      <form id="promptForm" class="prompt-form" onsubmit="return false;">
+        <input id="promptInput" placeholder="Describe the chart you want, e.g. 'Line of Date vs Sales across Regions'..." />
+        <button id="sendBtn" title="Send">Ask</button>
+      </form>
+
+      <div class="data-tools">
+        <label class="file-label">
+          Upload CSV(s)
+          <input id="fileInput" type="file" accept=".csv,text/csv" multiple />
+        </label>
+
+        <button id="pasteCsvBtn">Paste CSV Data</button>
+        <button id="useSampleBtn">Load Sample Data</button>
+      </div>
+
+      <details open class="data-preview">
+        <summary>Data preview</summary>
+        <div id="preview" class="preview">No data loaded.</div>
+      </details>
+    </section>
+
+    <section class="right">
+      <div class="controls">
+        <label>
+          Dataset:
+          <select id="datasetSelect"></select>
+        </label>
+
+        <label>
+          Chart type:
+          <select id="chartType">
+            <option value="line">Line</option>
+            <option value="bar">Bar</option>
+            <option value="pie">Pie</option>
+            <option value="doughnut">Doughnut</option>
+            <option value="scatter">Scatter</option>
+          </select>
+        </label>
+
+        <label>
+          X / Category:
+          <select id="xSelect"></select>
+        </label>
+
+        <label>
+          Y / Value (multi-select possible):
+          <select id="ySelect" multiple size="3"></select>
+        </label>
+
+        <button id="renderBtn">Render Chart</button>
+        <button id="downloadBtn">Download PNG</button>
+        <button id="serverSuggestBtn" title="Use server LLM (if running)">Ask server for suggestion</button>
+      </div>
+
+      <div class="chart-wrap">
+        <canvas id="chartCanvas"></canvas>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <small>MMCARTBOX — Local-first chart assistant. Server optional for better natural language parsing.</small>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
