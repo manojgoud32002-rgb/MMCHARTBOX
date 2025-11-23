@@ -1,0 +1,598 @@
+{
+  "_id": "0a5c45f1-6853-4f65-8dad-7c802e3959b2_-_56386e85-6a44-4360-b778-5d6fae1a82db",
+  "active_version_id": "a99302b8-cfd2-4ba0-bd6d-5fd89415eabf",
+  "agent_id": "56386e85-6a44-4360-b778-5d6fae1a82db",
+  "embeddable": true,
+  "in_marketplace": false,
+  "insert_date_": "2025-11-13T14:50:57.088Z",
+  "last_updated_by": {
+    "user_name": "Madagoni  Manoj"
+  },
+  "machine_user_id": "2806d0fc-4fcc-46a9-9d78-d820af418e22",
+  "name": "MM AI",
+  "origin": {
+    "project": "0a5c45f1-6853-4f65-8dad-7c802e3959b2",
+    "region": "d7b62b",
+    "root_agent_id": "86db7e3b-5164-477f-b83c-22ff2297bedd"
+  },
+  "project": "0a5c45f1-6853-4f65-8dad-7c802e3959b2",
+  "public": false,
+  "share_styles": {
+    "bubble_icon": "pd/chat",
+    "bubble_style": "agent",
+    "hide_conversation_list": false,
+    "hide_description": false,
+    "hide_file_uploads": false,
+    "hide_logo": false,
+    "hide_tool_steps": false,
+    "input_placeholder_text": "Type your message...",
+    "primary_color": "#685FFF",
+    "selected_format": "template",
+    "starting_message_prompts": []
+  },
+  "type": "default",
+  "update_date_": "2025-11-13T15:23:06.281Z",
+  "params": {
+    "json": {
+      "meta": {
+        "instanceId": "237600ca44303ce91fa31ee72babcdc8493f55ee2c0e8aa2b78b3b4ce6f70bd9"
+      },
+      "nodes": [
+        {
+          "id": "e95fc182-b13e-4eab-852b-66ea821c4129",
+          "name": "On product created",
+          "type": "n8n-nodes-base.pipedriveTrigger",
+          "position": [
+            440,
+            500
+          ],
+          "webhookId": "4a700bc2-a3bf-43fb-902c-5ca5a74bf38d",
+          "parameters": {
+            "action": "added",
+            "object": "product"
+          },
+          "credentials": {
+            "pipedriveApi": {
+              "id": "1",
+              "name": "Pipedrive account"
+            }
+          },
+          "typeVersion": 1
+        },
+        {
+          "id": "a64af9df-3084-4376-ace9-50f0f21bbf35",
+          "name": "Set item to only current product data",
+          "type": "n8n-nodes-base.functionItem",
+          "position": [
+            680,
+            500
+          ],
+          "parameters": {
+            "functionCode": "// Code here will run once per input item.\n// More info and help: https://docs.n8n.io/nodes/n8n-nodes-base.functionItem\n// Tip: You can use luxon for dates and $jmespath for querying JSON structures\n\n// Add a new field called 'myNewField' to the JSON of the item\nitem = item.current;\n\n// You can write logs to the browser console\nconsole.log('Done!');\n\nreturn item;"
+          },
+          "typeVersion": 1
+        },
+        {
+          "id": "79b265a9-4021-4a1a-9b4a-4f3aeace9fe5",
+          "name": "Create product in Stripe",
+          "type": "n8n-nodes-base.httpRequest",
+          "position": [
+            900,
+            660
+          ],
+          "parameters": {
+            "url": "https://api.stripe.com/v1/products",
+            "options": {},
+            "requestMethod": "POST",
+            "authentication": "predefinedCredentialType",
+            "queryParametersUi": {
+              "parameter": [
+                {
+                  "name": "name",
+                  "value": "={{ $json[\"name\"] }}"
+                },
+                {
+                  "name": "description",
+                  "value": "={{ $json[\"description\"] || ' '}}"
+                }
+              ]
+            },
+            "nodeCredentialType": "stripeApi"
+          },
+          "credentials": {
+            "stripeApi": {
+              "id": "3",
+              "name": "Stripe account"
+            }
+          },
+          "typeVersion": 2
+        },
+        {
+          "id": "69e40a2b-1680-42f9-add9-cbef9bc0f63f",
+          "name": "Add created product Id to data",
+          "type": "n8n-nodes-base.merge",
+          "position": [
+            1320,
+            520
+          ],
+          "parameters": {
+            "mode": "mergeByIndex"
+          },
+          "typeVersion": 1
+        },
+        {
+          "id": "bc7428ba-829f-4a9b-af61-ea11c102d1d3",
+          "name": "Keep only productId of created product",
+          "type": "n8n-nodes-base.set",
+          "position": [
+            1100,
+            660
+          ],
+          "parameters": {
+            "values": {
+              "string": [
+                {
+                  "name": "StripeCreatedProductId",
+                  "value": "={{ $json[\"id\"] }}"
+                }
+              ]
+            },
+            "options": {},
+            "keepOnlySet": true
+          },
+          "typeVersion": 1
+        },
+        {
+          "id": "8571acfb-8ee9-410d-a5ca-9b173d034202",
+          "name": "Create price records in Stripe",
+          "type": "n8n-nodes-base.httpRequest",
+          "position": [
+            1760,
+            520
+          ],
+          "parameters": {
+            "url": "https://api.stripe.com/v1/prices",
+            "options": {},
+            "requestMethod": "POST",
+            "authentication": "predefinedCredentialType",
+            "queryParametersUi": {
+              "parameter": [
+                {
+                  "name": "currency",
+                  "value": "={{ $json[\"prices\"].currency }}"
+                },
+                {
+                  "name": "unit_amount",
+                  "value": "={{ $json[\"prices\"].price * 100 }}"
+                },
+                {
+                  "name": "product",
+                  "value": "={{ $json[\"StripeCreatedProductId\"] }}"
+                }
+              ]
+            },
+            "nodeCredentialType": "stripeApi"
+          },
+          "credentials": {
+            "stripeApi": {
+              "id": "3",
+              "name": "Stripe account"
+            }
+          },
+          "typeVersion": 2
+        },
+        {
+          "id": "f849ae73-aa7d-49b2-81a9-7470278d30a3",
+          "name": "Split prices to seperate items",
+          "type": "n8n-nodes-base.itemLists",
+          "position": [
+            1540,
+            520
+          ],
+          "parameters": {
+            "include": "selectedOtherFields",
+            "options": {},
+            "fieldToSplitOut": "prices",
+            "fieldsToInclude": {
+              "fields": [
+                {
+                  "fieldName": "StripeCreatedProductId"
+                }
+              ]
+            }
+          },
+          "typeVersion": 1
+        }
+      ],
+      "connections": {
+        "On product created": {
+          "main": [
+            [
+              {
+                "node": "Set item to only current product data",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Create product in Stripe": {
+          "main": [
+            [
+              {
+                "node": "Keep only productId of created product",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Add created product Id to data": {
+          "main": [
+            [
+              {
+                "node": "Split prices to seperate items",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Split prices to seperate items": {
+          "main": [
+            [
+              {
+                "node": "Create price records in Stripe",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Set item to only current product data": {
+          "main": [
+            [
+              {
+                "node": "Create product in Stripe",
+                "type": "main",
+                "index": 0
+              },
+              {
+                "node": "Add created product Id to data",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Keep only productId of created product": {
+          "main": [
+            [
+              {
+                "node": "Add created product Id to data",
+                "type": "main",
+                "index": 1
+              }
+            ]
+          ]
+        }
+      }
+    },
+    "json_1": {
+      "meta": {
+        "instanceId": "408f9fb9940c3cb18ffdef0e0150fe342d6e655c3a9fac21f0f644e8bedabcd9",
+        "templateCredsSetupCompleted": true
+      },
+      "nodes": [
+        {
+          "id": "ef4c6982-f746-4d48-944b-449f8bdbb69f",
+          "name": "When chat message received",
+          "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+          "position": [
+            -180,
+            -380
+          ],
+          "webhookId": "53c136fe-3e77-4709-a143-fe82746dd8b6",
+          "parameters": {
+            "options": {}
+          },
+          "typeVersion": 1.1
+        },
+        {
+          "id": "e6183978-5077-4252-9718-6b36b6a7cd74",
+          "name": "Simple Memory",
+          "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+          "position": [
+            160,
+            -160
+          ],
+          "parameters": {},
+          "typeVersion": 1.3
+        },
+        {
+          "id": "1719e956-f9c8-48f5-9744-ee62345a9f7d",
+          "name": "OpenAI Chat Model",
+          "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+          "position": [
+            20,
+            -160
+          ],
+          "parameters": {
+            "model": {
+              "__rl": true,
+              "mode": "list",
+              "value": "gpt-4o-mini"
+            },
+            "options": {}
+          },
+          "credentials": {
+            "openAiApi": {
+              "id": "8gccIjcuf3gvaoEr",
+              "name": "OpenAi account"
+            }
+          },
+          "typeVersion": 1.2
+        },
+        {
+          "id": "f0815af7-da61-4863-9cfa-b35be836b59c",
+          "name": "SerpAPI",
+          "type": "@n8n/n8n-nodes-langchain.toolSerpApi",
+          "position": [
+            300,
+            -160
+          ],
+          "parameters": {
+            "options": {}
+          },
+          "credentials": {
+            "serpApi": {
+              "id": "aJCKjxx6U3K7ydDe",
+              "name": "SerpAPI account"
+            }
+          },
+          "typeVersion": 1
+        },
+        {
+          "id": "2d3b4012-bd5f-46d5-be6d-af1ede6c155b",
+          "name": "AI Agent",
+          "type": "@n8n/n8n-nodes-langchain.agent",
+          "position": [
+            60,
+            -380
+          ],
+          "parameters": {
+            "options": {}
+          },
+          "typeVersion": 1.8
+        }
+      ],
+      "pinData": {},
+      "connections": {
+        "SerpAPI": {
+          "ai_tool": [
+            [
+              {
+                "node": "AI Agent",
+                "type": "ai_tool",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Simple Memory": {
+          "ai_memory": [
+            [
+              {
+                "node": "AI Agent",
+                "type": "ai_memory",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "OpenAI Chat Model": {
+          "ai_languageModel": [
+            [
+              {
+                "node": "AI Agent",
+                "type": "ai_languageModel",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "When chat message received": {
+          "main": [
+            [
+              {
+                "node": "AI Agent",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        }
+      }
+    }
+  },
+  "metadata": {
+    "last_run_date": "2025-11-13T15:12:37.674Z"
+  },
+  "emoji": "https://userdata-d7b62b.stack.tryrelevance.com/files/public/0a5c45f1-6853-4f65-8dad-7c802e3959b2/agent-emoji-1000051446.jpg/db7d01f0-487d-41ee-8c5d-3de003c0b040.jpg",
+  "system_prompt": "## Goal\n\n## Tools\n\n* **Calculator: For math and logic queries.**\n\n* **Weather API: For real-time weather info.**\n\n* **Custom API: Connect to your own business data or services.**\n\n* **Document Q&A: Let the agent answer questions from uploaded PDFs or doc**\n\n## Rules\n\n* Always respond using markdown formatting.\n\n* Make sure you always...\n\n* Make sure you never...\n\n{{_knowledge.www_google_com}}",
+  "suggest_replies": true,
+  "thinking_tool": {
+    "enabled": true
+  },
+  "enable_python_executor": true,
+  "model": "relevance-performance-optimized",
+  "temperature": 0.9,
+  "knowledge": [
+    {
+      "knowledge_set": "Wikipedia",
+      "usage_type": "tool"
+    },
+    {
+      "knowledge_set": "www_thehindu_com_topic_live_news",
+      "usage_type": "tool"
+    },
+    {
+      "knowledge_set": "www_google_com",
+      "usage_type": "instructions"
+    }
+  ],
+  "actions": [
+    {
+      "emoji": "https://userdata-bcbe5a.stack.tryrelevance.com/files/public/4dc088f2dcfc-4e60-807e-353c334d4a5b/notebook-emoji-Google__G__logo.svg.png/347d5d47-3c67-4b99-8c32-545c0788b66c.png",
+      "title": "Perform Google Search",
+      "description": "Retrieve the latest information from the internet on a specified topic using Google Search.",
+      "chain_id": "59273744-7f2e-40a0-9e21-1db8d8c61a6e",
+      "project": "0a5c45f1-6853-4f65-8dad-7c802e3959b2",
+      "region": "d7b62b",
+      "action_behaviour": "never-ask"
+    },
+    {
+      "emoji": "https://userdata-f1db6c.stack.tryrelevance.com/files/public/7f52c5f2-34d3-4f45-ae56-489ded0c4a7d/notebook-emoji-google_calendar.png/1b9fa87f-4184-4f43-a70f-b9435fae8ebf.png",
+      "title": "Cancel Event in Google Calendar",
+      "description": "Use when you need to cancel an event that's in Google Calendar.",
+      "chain_id": "30649349-6fb8-4003-8aa7-750301bdb738",
+      "project": "0a5c45f1-6853-4f65-8dad-7c802e3959b2",
+      "region": "d7b62b",
+      "action_behaviour": "never-ask",
+      "prompt_description": "Use when you need to cancel an event that's in Google Calendar.",
+      "default_values": {
+        "oauth_account_id": "1ec712dd-da66-4b76-a62b-42ed354f397f"
+      }
+    },
+    {
+      "emoji": "https://cdn.jsdelivr.net/gh/RelevanceAI/content-cdn@latest/transformations/icons/png/browserless_scrape.png",
+      "title": "Extract website content",
+      "description": "Cloned for agent. Scrape and access website content from a link or URL",
+      "prompt_description": "Scrape and access website content from a link or URL",
+      "chain_id": "d6052c1b-60cd-45ce-845c-d25be9f25df6",
+      "project": "0a5c45f1-6853-4f65-8dad-7c802e3959b2",
+      "region": "d7b62b",
+      "action_behaviour": "never-ask"
+    },
+    {
+      "emoji": "https://cdn.jsdelivr.net/gh/RelevanceAI/content-cdn@latest/vendors/icons/google.svg",
+      "title": "Google Search",
+      "description": "Cloned for agent 'MM AI'. Search the web for keywords using Google and get the top website results.",
+      "prompt_description": "Search the web for keywords using Google and get the top website results.",
+      "chain_id": "5e18768e-f9fd-47df-9571-e7a8be7b3c1b",
+      "project": "0a5c45f1-6853-4f65-8dad-7c802e3959b2",
+      "region": "d7b62b",
+      "action_behaviour": "never-ask"
+    },
+    {
+      "emoji": "https://assets.pipedream.net/s.v0/app_1Z2hkv/logo/orig",
+      "title": "OpenWeather API - Get Current Weather by Location",
+      "description": "OpenWeather provides comprehensive weather data services, including current, forecast, and historical weather information.",
+      "prompt_description": "OpenWeather provides comprehensive weather data services, including current, forecast, and historical weather information.",
+      "chain_id": "0fa9f272-26e2-4892-aa68-91df735f7e97",
+      "project": "0a5c45f1-6853-4f65-8dad-7c802e3959b2",
+      "region": "d7b62b",
+      "action_behaviour": "never-ask",
+      "default_values": {},
+      "disabled": true
+    },
+    {
+      "emoji": "https://cdn.jsdelivr.net/gh/RelevanceAI/content-cdn@latest/vendors/icons/google-translate.svg",
+      "title": "Translate text",
+      "description": "Cloned for agent 'MM AI'. Translate 100+ languages via Google Translate",
+      "prompt_description": "Translate 100+ languages via Google Translate",
+      "chain_id": "384db385-02c6-48e4-b25c-0ee1d3f93add",
+      "project": "0a5c45f1-6853-4f65-8dad-7c802e3959b2",
+      "region": "d7b62b",
+      "action_behaviour": "never-ask"
+    },
+    {
+      "emoji": "https://assets.pipedream.net/s.v0/app_1P6h8l/logo/orig",
+      "title": "World News API - Search News",
+      "description": "The World News API gives you access to thousands of news sources in over 50 languages from over 150 countries.",
+      "prompt_description": "The World News API gives you access to thousands of news sources in over 50 languages from over 150 countries.",
+      "chain_id": "a34feb20-e7e8-4469-8437-09f834128680",
+      "project": "0a5c45f1-6853-4f65-8dad-7c802e3959b2",
+      "region": "d7b62b",
+      "action_behaviour": "never-ask",
+      "default_values": {
+        "oauth_account_id": "5e3a8a79-e118-415c-8402-c43be8274692"
+      }
+    },
+    {
+      "emoji": "https://assets.pipedream.net/s.v0/app_68hvpw/logo/orig",
+      "title": "APIVerve - Get Weather",
+      "description": "APIVerve provides a versatile collection of APIs designed to enhance your applications with functionalities spanning various domains. With a single API key, you can access a multitude of services, simplifying integration and accelerating development. APIVerve ensures high availability and scalability, allowing you to build robust solutions efficiently",
+      "prompt_description": "APIVerve provides a versatile collection of APIs designed to enhance your applications with functionalities spanning various domains. With a single API key, you can access a multitude of services, simplifying integration and accelerating development. APIVerve ensures high availability and scalability, allowing you to build robust solutions efficiently",
+      "chain_id": "e6d18922-803f-47de-82bc-f442f29e2c3a",
+      "project": "0a5c45f1-6853-4f65-8dad-7c802e3959b2",
+      "region": "d7b62b",
+      "action_behaviour": "never-ask",
+      "default_values": {
+        "oauth_account_id": "c6b1524f-6331-4a67-ae1c-e4dd7669c71c"
+      }
+    },
+    {
+      "emoji": "https://assets.pipedream.net/s.v0/app_mArhgo/logo/orig",
+      "title": "Solcast - Get Live Weather",
+      "description": "Solar resource assessment and forecasting data for irradiance and PV power, globally.",
+      "prompt_description": "Solar resource assessment and forecasting data for irradiance and PV power, globally.",
+      "chain_id": "65fb8c3e-2fd6-44e4-8188-3bfcfefea7b1",
+      "project": "0a5c45f1-6853-4f65-8dad-7c802e3959b2",
+      "region": "d7b62b",
+      "action_behaviour": "never-ask",
+      "default_values": {
+        "oauth_account_id": "82ab2f27-ef16-4e83-83ee-8bac1dd1dbef"
+      }
+    },
+    {
+      "emoji": "https://userdata-d7b62b.stack.tryrelevance.com/files/public/0a5c45f1-6853-4f65-8dad-7c802e3959b2/agent-emoji-1000051446.jpg/db7d01f0-487d-41ee-8c5d-3de003c0b040.jpg",
+      "title": "MM AI",
+      "agent_id": "b74faebb-cf84-4529-87bd-96df17bfcfc6",
+      "action_behaviour": "never-ask",
+      "default_values": {},
+      "params_schema": {
+        "properties": {}
+      }
+    }
+  ],
+  "action_behaviour": "always-ask",
+  "params_schema": {
+    "properties": {
+      "json": {
+        "type": "object",
+        "properties": {},
+        "value": {},
+        "order": 0,
+        "metadata": {
+          "is_fixed_param": true,
+          "advanced": true
+        }
+      },
+      "json_1": {
+        "type": "object",
+        "properties": {},
+        "value": {},
+        "order": 1,
+        "metadata": {
+          "advanced": true,
+          "is_fixed_param": true
+        }
+      }
+    },
+    "required": [
+      "json",
+      "json_1"
+    ]
+  },
+  "model_options": {
+    "strict_mode": true
+  },
+  "custom_metadata": {
+    "system_prompt": "You must explicitly call add_conversation_metadata tool whenever the metadata values (defined by the different input(s) to this tool and their descriptions) have changed. Ensure to keep the metadata up to date with information during your task particularly at the end when you've completed the task, before reporting back on your outcome, or calling another agent. Remember, if new information hasn't changed the metadata values there is no need to update them.",
+    "read_metadata_system_prompt": "Use the read_conversation_metadata tool ONLY when you need to access current metadata values that are not already available in your conversation context. Do not call this tool if metadata information is already present in the conversation history or context. Only use it when you specifically need to refresh or retrieve metadata that is missing from your current context to make informed decisions or take actions."
+  },
+  "action_retry_config": {
+    "force_retry": true
+  }
+}
